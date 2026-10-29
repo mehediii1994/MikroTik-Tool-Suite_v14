@@ -1,0 +1,1733 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<title>MikroTik Tool Suite v14</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0f172a;
+    color: #e2e8f0;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { font-size: 20px; color: #38bdf8; margin-bottom: 4px; }
+
+  /* ---------- tab navigation (shared) ---------- */
+  .tab-nav { display: flex; flex-wrap: wrap; gap: 8px; max-width: 1000px; margin: 0 auto 24px auto; }
+  .tab-btn {
+    background: #1e293b; border: 1px solid #334155; color: #94a3b8;
+    padding: 10px 18px; border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;
+  }
+  .tab-btn.active { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+  .tab-btn:hover:not(.active) { background: #334155; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ================================================================
+     PPPoE Secret Script Generator — scoped under #pppoeTab (unchanged)
+     ================================================================ */
+  #pppoeTab p.sub { color: #94a3b8; margin-top: 0; font-size: 13px; margin-bottom: 20px; }
+  #pppoeTab .container { max-width: 950px; margin: 0 auto; }
+  #pppoeTab .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  #pppoeTab label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; font-weight: bold; }
+  #pppoeTab textarea {
+    width: 100%; height: 220px; background: #1e293b; color: #e2e8f0;
+    border: 1px solid #334155; border-radius: 8px; padding: 12px;
+    font-family: Consolas, monospace; font-size: 14px; resize: vertical;
+  }
+  #pppoeTab .profile-row { margin-top: 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  #pppoeTab input[type=text] {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 10px 12px; font-family: Consolas, monospace; font-size: 14px; width: 220px;
+  }
+  #pppoeTab .version-select { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #cbd5e1; }
+  #pppoeTab select {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 8px 10px; font-size: 14px;
+  }
+  #pppoeTab button {
+    background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 6px;
+    font-weight: bold; cursor: pointer; margin-top: 18px; margin-right: 8px; font-size: 14px;
+  }
+  #pppoeTab button:hover { background: #0ea5e9; }
+  #pppoeTab button.secondary { background: #334155; color: #e2e8f0; }
+  #pppoeTab button.secondary:hover { background: #475569; }
+  #pppoeTab .result-box { margin-top: 24px; }
+  #pppoeTab .stat { font-size: 16px; font-weight: bold; color: #4ade80; margin-bottom: 10px; }
+  #pppoeTab pre {
+    background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 16px;
+    overflow-x: auto; font-family: Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    color: #7dd3fc; white-space: pre-wrap; word-break: break-all;
+  }
+  #pppoeTab .warn-box { margin-top: 18px; background: #1e1b0f; border: 1px solid #92400e; border-radius: 8px; padding: 14px; }
+  #pppoeTab .warn-title { color: #fbbf24; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #pppoeTab .warn-list { font-size: 13px; color: #fcd34d; margin: 0; padding-left: 18px; }
+  #pppoeTab .error-box { margin-top: 18px; background: #1e0f0f; border: 1px solid #b91c1c; border-radius: 8px; padding: 14px; }
+  #pppoeTab .error-title { color: #f87171; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #pppoeTab .error-list { font-size: 13px; color: #fca5a5; margin: 0; padding-left: 18px; }
+  #pppoeTab .dup-box { margin-top: 18px; background: #10131e; border: 1px solid #6366f1; border-radius: 8px; padding: 14px; }
+  #pppoeTab .dup-title { color: #a5b4fc; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #pppoeTab .dup-list { font-size: 13px; color: #c7d2fe; margin: 0; padding-left: 18px; }
+  #pppoeTab .copy-msg { color: #4ade80; font-size: 13px; margin-left: 4px; }
+  #pppoeTab .empty-msg { color: #64748b; font-size: 14px; margin-top: 20px; }
+  #pppoeTab .note { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  /* ================================================================
+     MikroTik Configuration Generator (VLAN + per-VLAN BGP) — #cfgTab
+     ================================================================ */
+  #cfgTab h2 {
+    font-size: 15px; color: #7dd3fc; margin: 28px 0 4px 0;
+    border-bottom: 1px solid #1e293b; padding-bottom: 6px;
+  }
+  #cfgTab p.sub { color: #94a3b8; margin-top: 0; font-size: 13px; margin-bottom: 16px; }
+  #cfgTab .container { max-width: 1000px; margin: 0 auto; }
+  #cfgTab .version-toggle { display: flex; gap: 8px; margin-bottom: 4px; }
+  #cfgTab .version-toggle input { display: none; }
+  #cfgTab .version-toggle label {
+    background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 8px 18px;
+    border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer; user-select: none;
+  }
+  #cfgTab .version-toggle input:checked + label { background: #38bdf8; color: #0f172a; border-color: #38bdf8; }
+  #cfgTab label { display: block; font-size: 12.5px; color: #94a3b8; margin-bottom: 4px; font-weight: bold; }
+  #cfgTab input[type=text], #cfgTab input[type=number] {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 8px 10px; font-family: Consolas, monospace; font-size: 13.5px; width: 100%;
+  }
+  #cfgTab .vlan-row { background: #141c30; border: 1px solid #263349; border-radius: 8px; padding: 14px; margin-bottom: 16px; }
+  #cfgTab .vlan-fields { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr auto; gap: 10px; align-items: end; }
+  #cfgTab .ip-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  #cfgTab .ip-row, #cfgTab .net-row { display: flex; gap: 8px; align-items: center; }
+  #cfgTab .ip-row input, #cfgTab .net-row input { flex: 1; }
+  #cfgTab .small-btn {
+    background: #334155; color: #e2e8f0; border: none; padding: 7px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 13px; white-space: nowrap;
+  }
+  #cfgTab .small-btn:hover { background: #475569; }
+  #cfgTab .remove-btn {
+    background: #3f1d1d; color: #fca5a5; border: 1px solid #7f1d1d; padding: 7px 11px;
+    border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  #cfgTab .remove-btn:hover { background: #5b2323; }
+  #cfgTab .add-ip-btn { margin-top: 8px; margin-right: 8px; }
+
+  /* per-VLAN BGP block */
+  #cfgTab .vlan-bgp {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed #334155;
+  }
+  #cfgTab .vlan-bgp-title {
+    font-size: 12.5px; color: #7dd3fc; font-weight: bold; margin-bottom: 8px;
+  }
+  #cfgTab .vlan-bgp-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  #cfgTab .net-block { margin-top: 4px; }
+  #cfgTab .net-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+
+  #cfgTab .actions { margin-top: 26px; }
+  #cfgTab button.main-btn {
+    background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 6px;
+    font-weight: bold; cursor: pointer; margin-right: 8px; margin-bottom: 8px; font-size: 14px;
+  }
+  #cfgTab button.main-btn:hover { background: #0ea5e9; }
+  #cfgTab button.main-btn.secondary { background: #334155; color: #e2e8f0; }
+  #cfgTab button.main-btn.secondary:hover { background: #475569; }
+  #cfgTab .result-box { margin-top: 24px; }
+  #cfgTab .target-line { font-size: 14px; font-weight: bold; color: #38bdf8; margin-bottom: 10px; }
+  #cfgTab .stat { font-size: 14px; color: #94a3b8; margin-bottom: 4px; }
+  #cfgTab pre {
+    background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 16px;
+    overflow-x: auto; font-family: Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    color: #7dd3fc; white-space: pre-wrap; word-break: break-all;
+  }
+  #cfgTab .warn-box, #cfgTab .error-box, #cfgTab .dup-box { margin-top: 14px; border-radius: 8px; padding: 14px; }
+  #cfgTab .warn-box { background: #1e1b0f; border: 1px solid #92400e; }
+  #cfgTab .warn-title { color: #fbbf24; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #cfgTab .warn-list { font-size: 13px; color: #fcd34d; margin: 0; padding-left: 18px; }
+  #cfgTab .error-box { background: #1e0f0f; border: 1px solid #b91c1c; }
+  #cfgTab .error-title { color: #f87171; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #cfgTab .error-list { font-size: 13px; color: #fca5a5; margin: 0; padding-left: 18px; }
+  #cfgTab .dup-box { background: #10131e; border: 1px solid #6366f1; }
+  #cfgTab .dup-title { color: #a5b4fc; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #cfgTab .dup-list { font-size: 13px; color: #c7d2fe; margin: 0; padding-left: 18px; }
+  #cfgTab .copy-msg { color: #4ade80; font-size: 13px; margin-left: 4px; }
+  #cfgTab .empty-msg { color: #64748b; font-size: 14px; margin-top: 20px; }
+  #cfgTab .note { font-size: 12px; color: #64748b; margin-top: 6px; }
+
+  /* ================================================================
+     Smart Loop Generator — scoped under #loopTab
+     ================================================================ */
+  #loopTab .container { max-width: 1000px; margin: 0 auto; }
+  #loopTab p.sub { color: #94a3b8; margin-top: 0; font-size: 13px; margin-bottom: 18px; }
+  #loopTab .lp-label { display: block; font-size: 12.5px; color: #94a3b8; margin: 0 0 6px 0; font-weight: bold; }
+  #loopTab textarea {
+    width: 100%; border: 1px solid #334155; border-radius: 8px; padding: 12px;
+    font-family: Consolas, 'Courier New', monospace; font-size: 13.5px; line-height: 1.55;
+    resize: vertical; white-space: pre; overflow: auto; tab-size: 4;
+  }
+  #loopTab #loopInput { height: 170px; background: #1e293b; color: #e2e8f0; }
+  #loopTab #loopOutput { height: 340px; background: #020617; color: #7dd3fc; }
+  #loopTab .lp-settings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; }
+  #loopTab input[type=number], #loopTab input[type=text], #loopTab select {
+    width: 100%; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 9px 10px; font-family: Consolas, monospace; font-size: 13.5px;
+  }
+  #loopTab .lp-hint { font-size: 11.5px; color: #64748b; margin-top: 4px; }
+  #loopTab .lp-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+  #loopTab .lp-btn {
+    background: #38bdf8; color: #0f172a; border: none; padding: 10px 18px; border-radius: 6px;
+    font-weight: bold; cursor: pointer; font-size: 13.5px; white-space: nowrap;
+  }
+  #loopTab .lp-btn:hover { background: #0ea5e9; }
+  #loopTab .lp-btn.secondary { background: #334155; color: #e2e8f0; }
+  #loopTab .lp-btn.secondary:hover { background: #475569; }
+  #loopTab .lp-btn.danger { background: #3f1d1d; color: #fca5a5; border: 1px solid #7f1d1d; }
+  #loopTab .lp-btn.danger:hover { background: #5b2323; }
+  #loopTab .lp-btn.small { padding: 8px 12px; font-size: 12.5px; }
+  #loopTab .lp-sep { width: 1px; align-self: stretch; background: #334155; margin: 0 4px; }
+  #loopTab .lp-toast { color: #4ade80; font-size: 13px; font-weight: bold; }
+  #loopTab .lp-toast.err { color: #f87171; }
+  #loopTab .lp-auto { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #94a3b8; margin-left: auto; cursor: pointer; }
+  #loopTab .lp-tpl-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+  #loopTab .lp-tpl-row input[type=text] { width: 200px; }
+  #loopTab .lp-tpl-row select { width: 220px; }
+  #loopTab .lp-stats { display: flex; flex-wrap: wrap; gap: 12px; margin: 22px 0 10px 0; }
+  #loopTab .lp-stat { background: #141c30; border: 1px solid #263349; border-radius: 8px; padding: 8px 14px; min-width: 130px; }
+  #loopTab .lp-stat span { display: block; font-size: 11.5px; color: #64748b; }
+  #loopTab .lp-stat b { font-family: Consolas, monospace; font-size: 16px; color: #4ade80; }
+  #loopTab .lp-status { font-size: 12.5px; color: #94a3b8; margin: 0 0 8px 0; min-height: 16px; }
+  #loopTab .lp-box { margin-top: 12px; border-radius: 8px; padding: 12px 14px; }
+  #loopTab .lp-box ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  #loopTab .lp-box-title { font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #loopTab .lp-error { background: #1e0f0f; border: 1px solid #b91c1c; color: #fca5a5; }
+  #loopTab .lp-error .lp-box-title { color: #f87171; }
+  #loopTab .lp-warn { background: #1e1b0f; border: 1px solid #92400e; color: #fcd34d; }
+  #loopTab .lp-warn .lp-box-title { color: #fbbf24; }
+  #loopTab .lp-info { background: #10131e; border: 1px solid #6366f1; color: #c7d2fe; font-size: 13px; }
+  #loopTab details { margin-top: 22px; background: #141c30; border: 1px solid #263349; border-radius: 8px; padding: 10px 14px; }
+  #loopTab summary { cursor: pointer; font-size: 13px; font-weight: bold; color: #7dd3fc; }
+  #loopTab details table { border-collapse: collapse; margin-top: 10px; font-size: 13px; width: 100%; }
+  #loopTab details td { padding: 4px 10px 4px 0; vertical-align: top; color: #cbd5e1; }
+  #loopTab details td:first-child { font-family: Consolas, monospace; color: #38bdf8; white-space: nowrap; }
+  #loopTab :focus-visible { outline: 2px solid #38bdf8; outline-offset: 1px; }
+  @media (max-width: 760px) {
+    #loopTab .lp-settings { grid-template-columns: 1fr 1fr; }
+    #loopTab .lp-auto { margin-left: 0; }
+    #loopTab .lp-tpl-row input[type=text], #loopTab .lp-tpl-row select { width: 100%; }
+    #loopTab .lp-sep { display: none; }
+  }
+
+  /* ================================================================
+     IPSec (IKEv2) Script Generator — scoped under #ipsecTab
+     ================================================================ */
+  #ipsecTab .container { max-width: 950px; margin: 0 auto; }
+  #ipsecTab p.sub { color: #94a3b8; margin-top: 0; font-size: 13px; margin-bottom: 20px; }
+  #ipsecTab .ip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  #ipsecTab .ip-grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+  #ipsecTab label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; font-weight: bold; }
+  #ipsecTab input[type=text], #ipsecTab select {
+    background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 6px;
+    padding: 10px 12px; font-family: Consolas, monospace; font-size: 14px; width: 100%;
+  }
+  #ipsecTab .ip-pw { display: flex; gap: 8px; }
+  #ipsecTab details { margin-top: 18px; background: #141c30; border: 1px solid #263349; border-radius: 8px; padding: 10px 14px; }
+  #ipsecTab summary { cursor: pointer; font-size: 13px; font-weight: bold; color: #7dd3fc; }
+  #ipsecTab .ip-check { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: #cbd5e1; font-weight: normal; }
+  #ipsecTab button {
+    background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 6px;
+    font-weight: bold; cursor: pointer; margin-top: 18px; margin-right: 8px; font-size: 14px;
+  }
+  #ipsecTab button:hover { background: #0ea5e9; }
+  #ipsecTab button.secondary { background: #334155; color: #e2e8f0; }
+  #ipsecTab button.secondary:hover { background: #475569; }
+  #ipsecTab .ip-pw button { margin: 0; white-space: nowrap; }
+  #ipsecTab .result-box { margin-top: 24px; }
+  #ipsecTab .stat { font-size: 14px; color: #94a3b8; margin-bottom: 4px; }
+  #ipsecTab .stat b { color: #4ade80; font-family: Consolas, monospace; }
+  #ipsecTab pre {
+    background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 10px;
+    overflow-x: auto; font-family: Consolas, monospace; font-size: 13.5px; line-height: 1.6;
+    color: #7dd3fc; white-space: pre-wrap; word-break: break-all;
+  }
+  #ipsecTab .error-box, #ipsecTab .warn-box { margin-top: 14px; border-radius: 8px; padding: 14px; }
+  #ipsecTab .error-box { background: #1e0f0f; border: 1px solid #b91c1c; }
+  #ipsecTab .warn-box { background: #1e1b0f; border: 1px solid #92400e; }
+  #ipsecTab .box-title { font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+  #ipsecTab .error-box .box-title { color: #f87171; }
+  #ipsecTab .warn-box .box-title { color: #fbbf24; }
+  #ipsecTab .error-box ul { color: #fca5a5; }
+  #ipsecTab .warn-box ul { color: #fcd34d; }
+  #ipsecTab ul { font-size: 13px; margin: 0; padding-left: 18px; }
+  #ipsecTab .copy-msg { color: #4ade80; font-size: 13px; margin-left: 4px; }
+  #ipsecTab .empty-msg { color: #64748b; font-size: 14px; margin-top: 20px; }
+  #ipsecTab .note { font-size: 12px; color: #64748b; margin-top: 6px; }
+  @media (max-width: 760px) { #ipsecTab .ip-grid, #ipsecTab .ip-grid3 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div class="tab-nav">
+  <button class="tab-btn active" id="tabBtnPppoe" onclick="showTab('pppoeTab')">PPPoE Secret Generator</button>
+  <button class="tab-btn" id="tabBtnCfg" onclick="showTab('cfgTab')">Config Generator (VLAN + BGP)</button>
+  <button class="tab-btn" id="tabBtnLoop" onclick="showTab('loopTab')">⚡ Smart Loop Generator</button>
+  <button class="tab-btn" id="tabBtnIpsec" onclick="showTab('ipsecTab')">🔐 IPSec (IKEv2) Generator</button>
+</div>
+
+<!-- ================================================================
+     TAB 1: PPPoE Secret Script Generator (unchanged)
+     ================================================================ -->
+<div class="tab-content active" id="pppoeTab">
+<div class="container">
+  <h1>MikroTik PPPoE Secret Script Generator</h1>
+  <p class="sub">Username আর Password আলাদা বক্সে পেস্ট করুন (এক লাইনে একজন, একই ক্রম অনুযায়ী)। Profile একটাই বসান — সব ইউজারের জন্য প্রযোজ্য হবে।</p>
+
+  <div class="grid">
+    <div>
+      <label>Username / Secret List (এক লাইনে একজন)</label>
+      <textarea id="userList" placeholder="user001
+user002
+user003"></textarea>
+    </div>
+    <div>
+      <label>Password List (এক লাইনে একজন, একই ক্রমে)</label>
+      <textarea id="passList" placeholder="pass111
+pass222
+pass333"></textarea>
+    </div>
+  </div>
+
+  <div class="profile-row">
+    <div>
+      <label>Profile (সব ইউজারের জন্য)</label>
+      <input type="text" id="profileInput" placeholder="20MB">
+    </div>
+    <div class="version-select">
+      <label style="margin:0;">RouterOS Version</label>
+      <select id="rosVersion">
+        <option value="v7">v7</option>
+        <option value="v6">v6</option>
+      </select>
+    </div>
+  </div>
+  <p class="note">নোট: /ppp secret add কমান্ড সিনট্যাক্স v6 ও v7-এ একই থাকে। Version সিলেক্ট করলে শুধু script header-এ কোন version-এর জন্য বানানো হয়েছে তা কমেন্ট আকারে লেখা থাকবে।</p>
+
+  <button onclick="generateScript()">Script তৈরি করো</button>
+  <button class="secondary" onclick="clearAll()">Clear</button>
+
+  <div class="result-box" id="resultBox"></div>
+</div>
+</div>
+
+<!-- ================================================================
+     TAB 2: MikroTik Configuration Generator — BGP now lives inside
+     each VLAN card (one VLAN = one service = its own BGP session)
+     ================================================================ -->
+<div class="tab-content" id="cfgTab">
+<div class="container">
+  <h1>MikroTik Configuration Generator</h1>
+  <p class="sub">প্রতিটা VLAN একটা আলাদা service — তাই প্রতিটা VLAN card-এর ভিতরেই তার নিজস্ব BGP session বসানো যাবে (কারো লাগবে না, কারো লাগবে)। RouterOS v6/v7 syntax কখনো mix হবে না।</p>
+
+  <h2>RouterOS Version</h2>
+  <div class="version-toggle">
+    <input type="radio" name="cfgRosVersion" id="cfgV7" value="v7" checked>
+    <label for="cfgV7">RouterOS v7</label>
+    <input type="radio" name="cfgRosVersion" id="cfgV6" value="v6">
+    <label for="cfgV6">RouterOS v6</label>
+  </div>
+  <p class="note">v7 target: RouterOS 7.21.5 (/routing bgp template, /routing bgp connection)। v6 target: classic /routing bgp instance, /routing bgp peer, /routing bgp network।</p>
+
+  <h2>VLAN + Per-VLAN BGP</h2>
+  <div id="vlanContainer"></div>
+  <button class="small-btn" onclick="addVlanRow()">+ Add VLAN (নতুন service)</button>
+
+  <div class="actions">
+    <button class="main-btn" onclick="generateCfgScript()">Generate Script</button>
+    <button class="main-btn secondary" onclick="downloadCfgScript()">Download .rsc</button>
+    <button class="main-btn secondary" onclick="clearCfgAll()">Clear</button>
+  </div>
+
+  <div class="result-box" id="cfgResultBox"></div>
+</div>
+</div>
+
+<!-- ================================================================
+     TAB 3: Smart Loop Generator
+     ================================================================ -->
+<div class="tab-content" id="loopTab">
+<div class="container">
+  <h1>⚡ Smart Loop Generator</h1>
+  <p class="sub">Generate repetitive network commands quickly and safely.</p>
+
+  <label class="lp-label" for="loopInput">Input Command / Template</label>
+  <textarea id="loopInput" wrap="off" spellcheck="false" autocomplete="off"
+            placeholder="set interfaces ae13 unit {n} vlan-id {n}"></textarea>
+
+  <div class="lp-settings">
+    <div>
+      <label class="lp-label" for="loopCount">Repeat Count</label>
+      <input type="number" id="loopCount" value="10" min="1" max="100000" step="1" inputmode="numeric">
+      <div class="lp-hint">1 – 100,000</div>
+    </div>
+    <div>
+      <label class="lp-label" for="loopStart">Start Number</label>
+      <input type="number" id="loopStart" value="1" step="1" inputmode="numeric">
+      <div class="lp-hint">First value of {n}</div>
+    </div>
+    <div>
+      <label class="lp-label" for="loopPad">Number Padding</label>
+      <select id="loopPad">
+        <option value="0">No padding</option>
+        <option value="2">2 digits (01)</option>
+        <option value="3">3 digits (001)</option>
+        <option value="4">4 digits (0001)</option>
+        <option value="5">5 digits (00001)</option>
+        <option value="6">6 digits (000001)</option>
+      </select>
+    </div>
+    <div>
+      <label class="lp-label" for="loopMode">Line Numbering</label>
+      <select id="loopMode">
+        <option value="none">No Number</option>
+        <option value="prefix">Prefix (1. command)</option>
+        <option value="suffix">Suffix (command 1)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="lp-row">
+    <button class="lp-btn" id="loopBtnGen">⚙ Generate</button>
+    <button class="lp-btn secondary" id="loopBtnCopy">📋 Copy</button>
+    <button class="lp-btn secondary" id="loopBtnClear">✕ Clear</button>
+    <button class="lp-btn secondary" id="loopBtnDownload">Download TXT</button>
+    <span class="lp-sep"></span>
+    <button class="lp-btn secondary small" id="loopBtnImport">Import TXT</button>
+    <button class="lp-btn secondary small" id="loopBtnExport">Export TXT</button>
+    <input type="file" id="loopFile" accept=".txt,.rsc,.cfg,.conf,text/plain" style="display:none">
+    <label class="lp-auto"><input type="checkbox" id="loopAuto" checked> Auto-update</label>
+  </div>
+  <div class="lp-row" style="margin-top:8px;"><span class="lp-toast" id="loopToast"></span></div>
+
+  <div class="lp-tpl-row">
+    <input type="text" id="loopTplName" maxlength="60" placeholder="Template name" aria-label="Template name">
+    <button class="lp-btn secondary small" id="loopBtnSaveTpl">Save Template</button>
+    <select id="loopTplSelect" aria-label="Saved templates"></select>
+    <button class="lp-btn secondary small" id="loopBtnLoadTpl">Load Template</button>
+    <button class="lp-btn danger small" id="loopBtnDelTpl">Delete</button>
+  </div>
+
+  <div class="lp-stats">
+    <div class="lp-stat"><span>Total loops</span><b id="loopStatLoops">0</b></div>
+    <div class="lp-stat"><span>Total generated lines</span><b id="loopStatLines">0</b></div>
+    <div class="lp-stat"><span>Characters</span><b id="loopStatChars">0</b></div>
+  </div>
+
+  <div id="loopMsgs"></div>
+  <p class="lp-status" id="loopStatus"></p>
+
+  <label class="lp-label" for="loopOutput">Output</label>
+  <textarea id="loopOutput" wrap="off" spellcheck="false" readonly
+            placeholder="Generated commands will appear here…"></textarea>
+
+  <details>
+    <summary>Variables &amp; shortcuts</summary>
+    <table>
+      <tr><td>{n}</td><td>Current loop number (starts at Start Number)</td></tr>
+      <tr><td>{i}</td><td>Zero-based loop index (0, 1, 2, …)</td></tr>
+      <tr><td>{n+100} {n-1} {n*2}</td><td>Arithmetic: + − * / % and parentheses, e.g. {(n-1)*4+10}</td></tr>
+      <tr><td>{n//2}</td><td>Integer (floor) division. Plain {n/2} keeps decimals if the result isn't whole (max 4 places).</td></tr>
+      <tr><td>Padding</td><td>Applies to every generated number, including expressions and Prefix/Suffix numbering.</td></tr>
+      <tr><td>Prefix / Suffix</td><td>Numbers each non-blank output line, counting from Start Number.</td></tr>
+      <tr><td>Ctrl + Enter</td><td>Generate</td></tr>
+      <tr><td>Ctrl + Shift + C</td><td>Copy output</td></tr>
+      <tr><td>Ctrl + L</td><td>Clear input and output</td></tr>
+    </table>
+    <div class="lp-hint" style="margin-top:8px;">Import TXT loads a file into the input box. Export TXT saves the input template. Download TXT saves the generated output. Braces that aren't a valid variable (e.g. {master:0}) are left untouched.</div>
+  </details>
+</div>
+</div>
+
+<!-- ================================================================
+     TAB 4: IPSec (IKEv2) Script Generator
+     ================================================================ -->
+<div class="tab-content" id="ipsecTab">
+<div class="container">
+  <h1>🔐 MikroTik IPSec (IKEv2) Script Generator</h1>
+  <p class="sub">শুধু Name আর Password দিন — Pool, Mode Config, Proposal, Profile, Group, Peer, Identity সহ পুরো IKEv2 script তৈরি হয়ে যাবে। Name থেকেই সব object-এর নাম বানানো হয় (যেমন Name = Office হলে Office_Pool, Office_Peer ইত্যাদি)।</p>
+
+  <div class="ip-grid">
+    <div>
+      <label for="ipName">IPSec Name</label>
+      <input type="text" id="ipName" placeholder="IKEV2" value="IKEV2" autocomplete="off" spellcheck="false">
+    </div>
+    <div>
+      <label for="ipSecret">Password (Pre-shared key)</label>
+      <div class="ip-pw">
+        <input type="text" id="ipSecret" placeholder="Password" autocomplete="off" spellcheck="false">
+        <button type="button" class="secondary" onclick="ipsecRandomPass()">Random</button>
+      </div>
+    </div>
+  </div>
+
+  <details>
+    <summary>Advanced settings (দরকার না হলে default রাখুন)</summary>
+    <div class="ip-grid3">
+      <div><label for="ipPool">Pool name</label><input type="text" id="ipPool" value="VPN" spellcheck="false"></div>
+      <div><label class="ip-check" style="margin-top:28px"><input type="checkbox" id="ipMakePool" checked> Pool তৈরি করো (আগে থেকে থাকলে untick)</label></div>
+    </div>
+    <div class="ip-grid3">
+      <div><label for="ipRange">Pool range</label><input type="text" id="ipRange" value="10.10.10.2-10.10.10.254" spellcheck="false"></div>
+      <div><label for="ipDns">DNS Server (static-dns, কমা দিয়ে)</label><input type="text" id="ipDns" value="103.109.56.100,8.8.8.8" spellcheck="false"></div>
+      <div><label for="ipPrefix">Address prefix length</label><input type="text" id="ipPrefix" value="32" spellcheck="false"></div>
+    </div>
+    <div class="ip-grid3">
+      <div><label for="ipEnc">Profile enc-algorithm</label>
+        <select id="ipEnc"><option value="aes-256,3des">aes-256,3des (পুরনো client-সহ)</option><option value="aes-256,aes-128">aes-256,aes-128 (বেশি secure)</option></select></div>
+      <div><label for="ipHash">Hash algorithm</label>
+        <select id="ipHash"><option value="sha256">sha256</option><option value="sha1">sha1</option></select></div>
+      <div><label for="ipDh">DH group</label>
+        <select id="ipDh"><option value="">Default (RouterOS-এর নিজস্ব, কিছু লেখা হবে না)</option><option value="modp1024">modp1024</option><option value="modp2048">modp2048 (বেশি secure)</option></select></div>
+    </div>
+    <label class="ip-check"><input type="checkbox" id="ipFw"> Firewall input rule (UDP 500, 4500 ও ESP) যোগ করো</label>
+  </details>
+
+  <button onclick="generateIpsecScript()">Script তৈরি করো</button>
+  <button class="secondary" onclick="downloadIpsecScript()">Download .rsc</button>
+  <button class="secondary" onclick="clearIpsec()">Clear</button>
+
+  <div class="result-box" id="ipsecResultBox"></div>
+</div>
+</div>
+
+<script>
+/* ============================================================
+   Shared helper (identical in both original files)
+   ============================================================ */
+function escapeHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ============================================================
+   Tab switching
+   ============================================================ */
+/* RouterOS string quoting (escapes \ " $ ?) — সব ট্যাবে shared */
+function rosQuote(str) {
+  return '"' + String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/\?/g, '\\?') + '"';
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'pppoeTab') document.getElementById('tabBtnPppoe').classList.add('active');
+  if (id === 'cfgTab') document.getElementById('tabBtnCfg').classList.add('active');
+  if (id === 'loopTab') document.getElementById('tabBtnLoop').classList.add('active');
+  if (id === 'ipsecTab') document.getElementById('tabBtnIpsec').classList.add('active');
+}
+
+/* ============================================================
+   TAB 1: PPPoE Secret Script Generator — logic unchanged
+   ============================================================ */
+function generateScript() {
+  const userRaw = document.getElementById('userList').value.split(/\r?\n/);
+  const passRaw = document.getElementById('passList').value.split(/\r?\n/);
+  const profile = document.getElementById('profileInput').value.trim();
+  const version = document.getElementById('rosVersion').value;
+
+  // Excel থেকে "user<TAB>password" paste করলে Password box খালি থাকলেও কাজ করবে
+  if (document.getElementById('passList').value.trim() === '') {
+    userRaw.forEach((line, i) => {
+      const parts = line.split('\t');
+      if (parts.length >= 2) { userRaw[i] = parts[0]; passRaw[i] = parts[1]; }
+    });
+  }
+  const maxLen = Math.max(userRaw.length, passRaw.length);
+  let nameCount = {};
+  let validRows = [];
+  let missingPassword = [];
+  let missingUsernameSkipped = 0;
+
+  for (let i = 0; i < maxLen; i++) {
+    const name = (userRaw[i] || '').trim();
+    const password = (passRaw[i] || '').trim();
+
+    if (name === '' && password === '') continue;
+
+    if (name === '') {
+      missingUsernameSkipped++;
+      continue;
+    }
+
+    nameCount[name] = (nameCount[name] || 0) + 1;
+    if (nameCount[name] > 1) continue; // duplicate: প্রথমটা রাখা হবে, বাকিগুলো বাদ
+
+    if (password === '') {
+      missingPassword.push(name);
+      continue;
+    }
+
+    validRows.push({ name, password });
+  }
+
+  const duplicateNames = Object.keys(nameCount).filter(n => nameCount[n] > 1);
+  const profileMissing = profile === '';
+
+  let finalValid = [];
+  if (!profileMissing) {
+    finalValid = validRows;
+  }
+
+  let scriptLines = [];
+  scriptLines.push(`# RouterOS ${version} - /ppp secret script`);
+  scriptLines.push('/ppp secret');
+  for (let row of finalValid) {
+    scriptLines.push(`add name=${rosQuote(row.name)} password=${rosQuote(row.password)} profile=${rosQuote(profile)}`);
+  }
+
+  renderResult({
+    totalValid: finalValid.length,
+    scriptText: scriptLines.join('\n'),
+    duplicateNames,
+    missingPassword,
+    missingUsernameSkipped,
+    profileMissing
+  });
+}
+
+function renderResult(data) {
+  const box = document.getElementById('resultBox');
+  let html = '';
+
+  html += `<div class="stat">Total Valid User: ${data.totalValid}</div>`;
+
+  if (data.profileMissing) {
+    html += `<div class="error-box"><div class="error-title">⚠ Profile খালি — আগে Profile বক্সে ভ্যালু দিন (যেমন 20MB), তারপর Script তৈরি হবে।</div></div>`;
+  } else if (data.totalValid > 0) {
+    html += `<pre id="scriptOutput">${escapeHtml(data.scriptText)}</pre>`;
+    html += `<button onclick="copyScript()">Copy Script</button><span class="copy-msg" id="copyMsg"></span>`;
+  } else {
+    html += `<div class="empty-msg">কোনো valid row পাওয়া যায়নি। Input চেক করুন।</div>`;
+  }
+
+  if (data.duplicateNames.length > 0) {
+    html += `<div class="dup-box"><div class="dup-title">⚠ Duplicate Username (${data.duplicateNames.length}) — প্রথমটা রাখা হয়েছে, বাকিগুলো script থেকে বাদ:</div><ul class="dup-list">`;
+    data.duplicateNames.forEach(n => html += `<li>${escapeHtml(n)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  if (data.missingPassword.length > 0) {
+    html += `<div class="warn-box"><div class="warn-title">Missing Password (${data.missingPassword.length}):</div><ul class="warn-list">`;
+    data.missingPassword.forEach(n => html += `<li>${escapeHtml(n)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  if (data.missingUsernameSkipped > 0) {
+    html += `<div class="error-box"><div class="error-title">Skipped Rows (Username Blank): ${data.missingUsernameSkipped}</div></div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function copyScript() {
+  const text = document.getElementById('scriptOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('copyMsg').innerText = 'Copied!';
+    setTimeout(() => { document.getElementById('copyMsg').innerText = ''; }, 2000);
+  });
+}
+
+function clearAll() {
+  document.getElementById('userList').value = '';
+  document.getElementById('passList').value = '';
+  document.getElementById('profileInput').value = '';
+  document.getElementById('resultBox').innerHTML = '';
+}
+
+/* ============================================================
+   TAB 2: MikroTik Configuration Generator
+   Each VLAN card = one service = its own optional BGP session
+   ============================================================ */
+const defaultVlans = [
+  { id: '100', name: '100-INT',    iface: '' },
+  { id: '200', name: '200-GGC',    iface: '' },
+  { id: '300', name: '300-FNA',    iface: '' },
+  { id: '400', name: '400-CDN',    iface: '' },
+  { id: '500', name: '500-BDIX',   iface: '' },
+  { id: '600', name: '600-AKAMAI', iface: '' }
+];
+
+function vlanRowHtml(v) {
+  return `
+    <div class="vlan-row">
+      <div class="vlan-fields">
+        <div>
+          <label>VLAN ID</label>
+          <input type="text" class="vlan-id" value="${v.id}" placeholder="100">
+        </div>
+        <div>
+          <label>VLAN Name</label>
+          <input type="text" class="vlan-name" value="${v.name}" placeholder="100-INT">
+        </div>
+        <div>
+          <label>Parent Interface</label>
+          <input type="text" class="vlan-iface" value="${v.iface}" placeholder="sfp-sfpplus1">
+        </div>
+        <button class="remove-btn" onclick="this.closest('.vlan-row').remove()">Remove VLAN</button>
+      </div>
+
+      <div class="ip-list">
+        <div class="ip-row">
+          <input type="text" class="ip-input" placeholder="172.20.100.1/30">
+          <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+        </div>
+      </div>
+      <button class="small-btn add-ip-btn" onclick="addIpRow(this)">+ Add IP</button>
+
+      <div class="vlan-bgp">
+        <div class="vlan-bgp-title">BGP (এই VLAN/service-এর জন্য, না লাগলে খালি রাখুন)</div>
+        <div class="vlan-bgp-fields">
+          <div>
+            <label>BGP Name (optional)</label>
+            <input type="text" class="bgp-name" placeholder="(default: VLAN name)-bgp">
+          </div>
+          <div>
+            <label>Local AS</label>
+            <input type="text" class="bgp-local-as" placeholder="65001">
+          </div>
+          <div>
+            <label>Remote AS</label>
+            <input type="text" class="bgp-remote-as" placeholder="65002">
+          </div>
+          <div>
+            <label>Remote Address</label>
+            <input type="text" class="bgp-remote-address" placeholder="172.20.1.2">
+          </div>
+          <div>
+            <label>Local Address (optional)</label>
+            <input type="text" class="bgp-local-address" placeholder="172.20.1.1">
+          </div>
+        </div>
+        <div class="net-block">
+          <label>Output Network (এই BGP-তে যেসব prefix advertise হবে)</label>
+          <div class="net-list">
+            <div class="net-row">
+              <input type="text" class="net-input" placeholder="103.109.56.0/24">
+              <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>
+            </div>
+          </div>
+          <button class="small-btn" onclick="addNetRow(this)">+ Add Output Network</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function addVlanRow(data) {
+  const container = document.getElementById('vlanContainer');
+  const div = document.createElement('div');
+  div.innerHTML = vlanRowHtml(data || { id: '', name: '', iface: '' });
+  const row = div.firstElementChild;
+  container.appendChild(row);
+  const versionEl = document.querySelector('input[name=cfgRosVersion]:checked');
+  if (versionEl && versionEl.value === 'v6') {
+    const nb = row.querySelector('.net-block');
+    if (nb) nb.style.display = 'none';
+  }
+}
+
+function addIpRow(btn) {
+  const list = btn.closest('.vlan-row').querySelector('.ip-list');
+  const row = document.createElement('div');
+  row.className = 'ip-row';
+  row.innerHTML = `<input type="text" class="ip-input" placeholder="172.20.100.1/30">
+                    <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(row);
+}
+
+function addNetRow(btn) {
+  const list = btn.closest('.vlan-row').querySelector('.net-list');
+  const row = document.createElement('div');
+  row.className = 'net-row';
+  row.innerHTML = `<input type="text" class="net-input" placeholder="103.109.56.0/24">
+                    <button class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+  list.appendChild(row);
+}
+
+function initCfgDefaults() {
+  document.getElementById('vlanContainer').innerHTML = '';
+  defaultVlans.forEach(v => addVlanRow(v));
+  applyNetBlockVisibility();
+}
+initCfgDefaults();
+
+/* RouterOS v6-এ Output Network প্রযোজ্য নয় (ফিল্ড লুকিয়ে রাখা হয়) —
+   v7 select করলে আবার দেখা যাবে। */
+function applyNetBlockVisibility() {
+  const version = document.querySelector('input[name=cfgRosVersion]:checked').value;
+  document.querySelectorAll('#cfgTab .net-block').forEach(nb => {
+    nb.style.display = (version === 'v6') ? 'none' : '';
+  });
+}
+document.getElementById('cfgV6').addEventListener('change', applyNetBlockVisibility);
+document.getElementById('cfgV7').addEventListener('change', applyNetBlockVisibility);
+
+/* ---------- validation helpers ---------- */
+function isValidCIDR(str) {
+  const m = str.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})\/(\d{1,2})$/);
+  if (!m) return false;
+  for (let i = 1; i <= 4; i++) if (+m[i] > 255) return false;
+  const prefix = +m[5];
+  return prefix >= 0 && prefix <= 32;
+}
+
+function isValidAddressOptCIDR(str) {
+  const m = str.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(\/(\d{1,2}))?$/);
+  if (!m) return false;
+  for (let i = 1; i <= 4; i++) if (+m[i] > 255) return false;
+  if (m[6] !== undefined) {
+    const prefix = +m[6];
+    if (prefix < 0 || prefix > 32) return false;
+  }
+  return true;
+}
+
+function isValidASN(str) {
+  if (!/^\d+$/.test(str)) return false;
+  const n = Number(str);
+  return n >= 1 && n <= 4294967295;
+}
+
+/* ---------- collect + validate (per VLAN row, including its own BGP) ---------- */
+function validateAndBuild(version) {
+  const errors = [];
+  const warnings = [];
+  const duplicates = [];
+
+  const rows = document.querySelectorAll('.vlan-row');
+  const rawVlans = [];
+  rows.forEach(row => {
+    rawVlans.push({
+      row,
+      id: row.querySelector('.vlan-id').value.trim(),
+      name: row.querySelector('.vlan-name').value.trim(),
+      iface: row.querySelector('.vlan-iface').value.trim(),
+      ips: Array.from(row.querySelectorAll('.ip-input')).map(i => i.value.trim()).filter(Boolean),
+      bgpName: row.querySelector('.bgp-name').value.trim(),
+      localAS: row.querySelector('.bgp-local-as').value.trim(),
+      remoteAS: row.querySelector('.bgp-remote-as').value.trim(),
+      remoteAddress: row.querySelector('.bgp-remote-address').value.trim(),
+      localAddress: row.querySelector('.bgp-local-address').value.trim(),
+      // RouterOS v6-এ Output Network প্রযোজ্য নয় (ফিল্ডও লুকানো থাকে) — তাই v6-এ সবসময় খালি ধরা হবে
+      nets: version === 'v6' ? [] : Array.from(row.querySelectorAll('.net-input')).map(i => i.value.trim()).filter(Boolean)
+    });
+  });
+
+  const idCount = {};
+  const nameCount = {};
+  rawVlans.forEach(v => {
+    if (v.id) idCount[v.id] = (idCount[v.id] || 0) + 1;
+    if (v.name) nameCount[v.name] = (nameCount[v.name] || 0) + 1;
+  });
+
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const seenBgpNames = new Set();
+  const services = [];
+
+  rawVlans.forEach(v => {
+    const label = v.name || v.id || '(unnamed)';
+    if (!v.id) { errors.push(`VLAN "${label}": VLAN ID missing — বাদ দেওয়া হয়েছে`); return; }
+    if (!v.name) { errors.push(`VLAN ID ${v.id}: VLAN Name missing — বাদ দেওয়া হয়েছে`); return; }
+    if (!v.iface) { errors.push(`VLAN ${v.name}: Parent Interface missing — বাদ দেওয়া হয়েছে`); return; }
+    if (!/^[A-Za-z0-9_.\-]{1,15}$/.test(v.name)) { errors.push(`VLAN Name "${escapeHtml(v.name)}": শুধু English letter, number, _ . - ব্যবহার করুন (স্পেস ছাড়া, সর্বোচ্চ ১৫ অক্ষর) — বাদ দেওয়া হয়েছে`); return; }
+    if (!/^[A-Za-z0-9_.\-]+$/.test(v.iface)) { errors.push(`VLAN ${v.name}: Parent Interface "${escapeHtml(v.iface)}" সঠিক নয় (স্পেস/বিশেষ চিহ্ন ছাড়া নাম দিন) — বাদ দেওয়া হয়েছে`); return; }
+
+    if (idCount[v.id] > 1) {
+      if (seenIds.has(v.id)) { duplicates.push(`Duplicate VLAN ID "${v.id}" (${v.name}) — skip করা হয়েছে`); return; }
+      seenIds.add(v.id);
+    }
+    if (nameCount[v.name] > 1) {
+      if (seenNames.has(v.name)) { duplicates.push(`Duplicate VLAN Name "${v.name}" — skip করা হয়েছে`); return; }
+      seenNames.add(v.name);
+    }
+
+    const validIps = [];
+    v.ips.forEach(ip => {
+      if (isValidCIDR(ip)) validIps.push(ip);
+      else errors.push(`VLAN ${v.name}: Invalid IP/CIDR "${escapeHtml(ip)}" — বাদ দেওয়া হয়েছে`);
+    });
+
+    // per-VLAN BGP
+    const bgpTouched = !!(v.bgpName || v.localAS || v.remoteAS || v.remoteAddress || v.localAddress || v.nets.length);
+    let bgp = null;
+
+    if (bgpTouched) {
+      const bgpName = v.bgpName || `${v.name}-bgp`;
+      let fatal = false;
+
+      if (!v.localAS) { errors.push(`VLAN ${v.name} BGP: Local AS missing`); fatal = true; }
+      else if (!isValidASN(v.localAS)) { errors.push(`VLAN ${v.name} BGP: Invalid Local AS "${escapeHtml(v.localAS)}"`); fatal = true; }
+
+      if (!v.remoteAS) { errors.push(`VLAN ${v.name} BGP: Remote AS missing`); fatal = true; }
+      else if (!isValidASN(v.remoteAS)) { errors.push(`VLAN ${v.name} BGP: Invalid Remote AS "${escapeHtml(v.remoteAS)}"`); fatal = true; }
+
+      if (!v.remoteAddress) { errors.push(`VLAN ${v.name} BGP: Remote Address missing`); fatal = true; }
+      else if (!isValidAddressOptCIDR(v.remoteAddress)) { errors.push(`VLAN ${v.name} BGP: Invalid Remote Address "${escapeHtml(v.remoteAddress)}"`); fatal = true; }
+
+      if (v.localAddress && !isValidAddressOptCIDR(v.localAddress)) {
+        errors.push(`VLAN ${v.name} BGP: Invalid Local Address "${escapeHtml(v.localAddress)}"`);
+      }
+
+      const seenNets = new Set();
+      const validNets = [];
+      v.nets.forEach(n => {
+        if (!isValidCIDR(n)) { errors.push(`VLAN ${v.name} Output Network: Invalid prefix "${escapeHtml(n)}" — বাদ দেওয়া হয়েছে`); return; }
+        if (seenNets.has(n)) { duplicates.push(`VLAN ${v.name}: Duplicate Output Network "${n}" — skip করা হয়েছে`); return; }
+        seenNets.add(n);
+        validNets.push(n);
+      });
+
+      if (!fatal && seenBgpNames.has(bgpName)) {
+        duplicates.push(`Duplicate BGP Name "${bgpName}" (VLAN ${v.name}) — এই VLAN-এর BGP section বাদ দেওয়া হয়েছে`);
+        fatal = true;
+      }
+
+      if (fatal) {
+        errors.push(`VLAN ${v.name}: BGP প্রয়োজনীয় ফিল্ড অসম্পূর্ণ/duplicate থাকায় এই VLAN-এর BGP section বাদ দেওয়া হয়েছে (VLAN/IP অংশ ঠিকই থাকবে)।`);
+      } else {
+        seenBgpNames.add(bgpName);
+        bgp = { name: bgpName, localAS: v.localAS, remoteAS: v.remoteAS, remoteAddress: v.remoteAddress, localAddress: v.localAddress, networks: validNets };
+        if (version === 'v7' && validNets.length === 0) warnings.push(`VLAN ${v.name} BGP: কোনো valid Output Network দেওয়া হয়নি — শুধু peer/connection তৈরি হবে।`);
+      }
+    } else {
+      warnings.push(`VLAN ${v.name}: BGP তথ্য দেওয়া হয়নি — শুধু VLAN/IP config তৈরি হবে।`);
+    }
+
+    services.push({ id: v.id, name: v.name, iface: v.iface, ips: validIps, bgp });
+  });
+
+  return { services, errors, warnings, duplicates };
+}
+
+/* ---------- script generation ---------- */
+function buildBgpBlockV6(bgp) {
+  let lines = [];
+  lines.push('/routing bgp instance');
+  lines.push(`set default as=${bgp.localAS}`);
+  lines.push('');
+  lines.push('/routing bgp peer');
+  let peerLine = `add name=${bgp.name} remote-address=${bgp.remoteAddress} remote-as=${bgp.remoteAS}`;
+  if (bgp.localAddress) peerLine += ` local-address=${bgp.localAddress}`;
+  lines.push(peerLine);
+
+  if (bgp.networks.length > 0) {
+    lines.push('');
+    lines.push('/routing bgp network');
+    bgp.networks.forEach(n => lines.push(`add network=${n}`));
+  }
+  return lines.join('\n');
+}
+
+function buildBgpBlockV7(bgp) {
+  const templateName = `${bgp.name}-template`;
+  let lines = [];
+  lines.push('/routing bgp template');
+  lines.push(`add name=${templateName} as=${bgp.localAS}`);
+  lines.push('');
+  lines.push('/routing bgp connection');
+  let connLine = `add name=${bgp.name} remote.address=${bgp.remoteAddress} remote.as=${bgp.remoteAS} templates=${templateName} local.role=${bgp.localAS === bgp.remoteAS ? 'ibgp' : 'ebgp'}`;
+  if (bgp.localAddress) connLine += ` local.address=${bgp.localAddress}`;
+  lines.push(connLine);
+
+  if (bgp.networks.length > 0) {
+    const filterChain = `${bgp.name}-out-filter`;
+    lines.push('');
+    lines.push('# v7-তে সরাসরি "/routing bgp network" কমান্ড নেই — static (blackhole) route');
+    lines.push('# + routing filter rule দিয়ে prefix origination দেখানো হয়েছে। Apply করার আগে');
+    lines.push('# আপনার RouterOS 7.21.5 বিল্ডে filter rule সিনট্যাক্স যাচাই করে নিন।');
+    lines.push('/ip route');
+    bgp.networks.forEach(n => lines.push(`add dst-address=${n} type=blackhole`));
+    lines.push('');
+    lines.push('/routing filter rule');
+    bgp.networks.forEach(n => lines.push(`add chain=${filterChain} rule="if (dst in ${n}) { accept }"`));
+    lines.push(`add chain=${filterChain} rule="reject"`);
+    lines.push('');
+    lines.push('/routing bgp template');
+    lines.push(`set [find name=${templateName}] output.filter-chain=${filterChain}`);
+  }
+  return lines.join('\n');
+}
+
+function buildServiceBlock(service, version) {
+  let lines = [];
+  lines.push('# ========================');
+  lines.push(`# SERVICE: ${service.name} (VLAN ${service.id})`);
+  lines.push('# ========================');
+  lines.push('/interface vlan');
+  lines.push(`add name=${service.name} vlan-id=${service.id} interface=${service.iface}`);
+
+  if (service.ips.length > 0) {
+    lines.push('');
+    lines.push('/ip address');
+    service.ips.forEach(ip => lines.push(`add address=${ip} interface=${service.name}`));
+  }
+
+  if (service.bgp) {
+    lines.push('');
+    lines.push(version === 'v7' ? buildBgpBlockV7(service.bgp) : buildBgpBlockV6(service.bgp));
+  }
+
+  return lines.join('\n');
+}
+
+function generateCfgScript() {
+  const version = document.querySelector('input[name=cfgRosVersion]:checked').value;
+  const { services, errors, warnings, duplicates } = validateAndBuild(version);
+  if (version === 'v6') {
+    const asSet = new Set(services.filter(s => s.bgp).map(s => s.bgp.localAS));
+    if (asSet.size > 1) warnings.push('RouterOS v6-তে BGP instance একটাই (default) — একাধিক আলাদা Local AS (' + Array.from(asSet).join(', ') + ') দিলে শেষেরটা আগেরগুলো overwrite করবে। সব VLAN-এ একই Local AS দিন, অথবা আলাদা instance হাতে বানান।');
+  }
+
+  let lines = [];
+  lines.push('# ========================');
+  lines.push('# ROUTEROS VERSION');
+  lines.push('# ========================');
+  lines.push(version === 'v7' ? '# Target RouterOS: v7.21.5' : '# Target RouterOS: v6');
+  lines.push('# Apply করার আগে: /system backup save name=pre-apply  এবং Winbox Safe Mode চালু রাখুন');
+  lines.push('');
+
+  services.forEach((s, i) => {
+    lines.push(buildServiceBlock(s, version));
+    if (i < services.length - 1) lines.push('');
+  });
+
+  const scriptText = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const bgpCount = services.filter(s => s.bgp).length;
+
+  renderCfgResult({
+    version,
+    scriptText,
+    hasContent: services.length > 0,
+    validVlanCount: services.length,
+    bgpCount,
+    errors,
+    warnings,
+    duplicates
+  });
+}
+
+function renderCfgResult(data) {
+  const box = document.getElementById('cfgResultBox');
+  let html = '';
+
+  html += `<div class="target-line">Target RouterOS: ${data.version === 'v7' ? 'v7.21.5' : 'v6'}</div>`;
+  html += `<div class="stat">Valid VLAN (Service): ${data.validVlanCount}</div>`;
+  html += `<div class="stat">BGP Configured: ${data.bgpCount} / ${data.validVlanCount}</div>`;
+
+  if (data.hasContent) {
+    html += `<pre id="cfgScriptOutput">${escapeHtml(data.scriptText)}</pre>`;
+    html += `<button class="main-btn" onclick="copyCfgScript()">Copy Script</button><span class="copy-msg" id="cfgCopyMsg"></span>`;
+  } else {
+    html += `<div class="empty-msg">কোনো valid configuration পাওয়া যায়নি। Input চেক করুন।</div>`;
+  }
+
+  if (data.errors.length > 0) {
+    html += `<div class="error-box"><div class="error-title">⚠ Errors (${data.errors.length}):</div><ul class="error-list">`;
+    data.errors.forEach(e => html += `<li>${escapeHtml(e)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  if (data.duplicates.length > 0) {
+    html += `<div class="dup-box"><div class="dup-title">⚠ Duplicates (${data.duplicates.length}):</div><ul class="dup-list">`;
+    data.duplicates.forEach(d => html += `<li>${escapeHtml(d)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  if (data.warnings.length > 0) {
+    html += `<div class="warn-box"><div class="warn-title">Notes (${data.warnings.length}):</div><ul class="warn-list">`;
+    data.warnings.forEach(w => html += `<li>${escapeHtml(w)}</li>`);
+    html += `</ul></div>`;
+  }
+
+  box.innerHTML = html;
+  window._lastCfgScript = data.hasContent ? data.scriptText : '';
+}
+
+function copyCfgScript() {
+  const text = document.getElementById('cfgScriptOutput').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    document.getElementById('cfgCopyMsg').innerText = 'Copied!';
+    setTimeout(() => { document.getElementById('cfgCopyMsg').innerText = ''; }, 2000);
+  });
+}
+
+function downloadCfgScript() {
+  if (!window._lastCfgScript) {
+    generateCfgScript();
+  }
+  if (!window._lastCfgScript) return;
+  const blob = new Blob([window._lastCfgScript], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mikrotik-config.rsc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function clearCfgAll() {
+  initCfgDefaults();
+  document.getElementById('cfgResultBox').innerHTML = '';
+  window._lastCfgScript = '';
+}
+
+/* ============================================================
+   TAB 3: Smart Loop Generator — all identifiers prefixed "loop"
+   ============================================================ */
+const LOOP_MAX_COUNT = 100000;
+const LOOP_CONFIRM_LINES = 50000;    // ask before generating more lines than this
+const LOOP_HARD_MAX_LINES = 500000;  // refuse beyond this (browser textarea limit)
+const LOOP_SYNC_LINES = 5000;        // small jobs run in one go, larger ones in chunks
+const LOOP_CHUNK_LINES = 20000;
+const LOOP_STORE_KEY = 'smartLoopTemplates';
+
+let loopToken = 0;          // increments to cancel any in-flight generation
+let loopLastOutput = '';
+let loopDebounce = null;
+let loopToastTimer = null;
+
+function loopEl(id) { return document.getElementById(id); }
+function loopNum(n) { return n.toLocaleString('en-US'); }
+
+/* ---------- safe arithmetic expression compiler (no eval) ---------- */
+function loopTokenize(src) {
+  const toks = [];
+  let p = 0;
+  while (p < src.length) {
+    const c = src[p];
+    if (/\s/.test(c)) { p++; continue; }
+    if (/[0-9]/.test(c) || (c === '.' && /[0-9]/.test(src[p + 1] || ''))) {
+      let q = p;
+      while (q < src.length && /[0-9.]/.test(src[q])) q++;
+      const s = src.slice(p, q);
+      if (!/^(\d+\.?\d*|\.\d+)$/.test(s)) throw new Error('bad number "' + s + '"');
+      toks.push({ t: 'num', v: parseFloat(s) });
+      p = q; continue;
+    }
+    if (c === 'n' || c === 'i') { toks.push({ t: 'var', v: c }); p++; continue; }
+    if (c === '/' && src[p + 1] === '/') { toks.push({ t: 'op', v: '//' }); p += 2; continue; }
+    if ('+-*/%()'.indexOf(c) !== -1) { toks.push({ t: 'op', v: c }); p++; continue; }
+    throw new Error('unexpected "' + c + '"');
+  }
+  return toks;
+}
+
+function loopCompileExpr(src) {
+  const toks = loopTokenize(src);
+  let p = 0;
+  const isOp = (v) => toks[p] && toks[p].t === 'op' && toks[p].v === v;
+
+  function parseExpr() {
+    let left = parseTerm();
+    while (isOp('+') || isOp('-')) {
+      const op = toks[p++].v, a = left, b = parseTerm();
+      left = op === '+' ? (c) => a(c) + b(c) : (c) => a(c) - b(c);
+    }
+    return left;
+  }
+  function parseTerm() {
+    let left = parseUnary();
+    while (isOp('*') || isOp('/') || isOp('//') || isOp('%')) {
+      const op = toks[p++].v, a = left, b = parseUnary();
+      if (op === '*') left = (c) => a(c) * b(c);
+      else if (op === '/') left = (c) => a(c) / b(c);
+      else if (op === '//') left = (c) => Math.floor(a(c) / b(c));
+      else left = (c) => a(c) % b(c);
+    }
+    return left;
+  }
+  function parseUnary() {
+    if (isOp('-')) { p++; const a = parseUnary(); return (c) => -a(c); }
+    if (isOp('+')) { p++; return parseUnary(); }
+    return parseAtom();
+  }
+  function parseAtom() {
+    const tok = toks[p];
+    if (!tok) throw new Error('incomplete expression');
+    if (tok.t === 'num') { p++; const v = tok.v; return () => v; }
+    if (tok.t === 'var') { p++; const k = tok.v; return (c) => c[k]; }
+    if (isOp('(')) {
+      p++;
+      const inner = parseExpr();
+      if (!isOp(')')) throw new Error('missing ")"');
+      p++;
+      return inner;
+    }
+    throw new Error('unexpected "' + tok.v + '"');
+  }
+
+  const fn = parseExpr();
+  if (p < toks.length) throw new Error('unexpected "' + toks[p].v + '"');
+  return fn;
+}
+
+/* ---------- number formatting (padding) ---------- */
+function loopFmt(v, pad) {
+  if (!Number.isFinite(v)) throw new Error('result is not a number (division by zero?)');
+  const rounded = Number.isInteger(v) ? v : Math.round(v * 10000) / 10000;
+  const neg = rounded < 0;
+  let s = String(Math.abs(rounded));
+  if (s.indexOf('e') !== -1) s = Math.abs(rounded).toFixed(0);
+  if (pad > 0) {
+    const dot = s.indexOf('.');
+    const intPart = dot === -1 ? s : s.slice(0, dot);
+    const rest = dot === -1 ? '' : s.slice(dot);
+    s = intPart.padStart(pad, '0') + rest;
+  }
+  return (neg ? '-' : '') + s;
+}
+
+/* ---------- template compiler ---------- */
+function loopCompileTemplate(text) {
+  const errors = [];
+  const warnings = new Set();
+  const lines = [];
+  const src = text.replace(/\r\n?/g, '\n').replace(/\s+$/, '');
+
+  src.split('\n').forEach((line, idx) => {
+    if (line.trim() === '') { lines.push({ blank: true }); return; }
+    const parts = [];
+    let last = 0, m;
+    const re = /\{([^{}]*)\}/g;
+    while ((m = re.exec(line)) !== null) {
+      const inner = m[1].toLowerCase();
+      if (/^[\sni\d+\-*\/%().]+$/.test(inner) && /[ni]/.test(inner)) {
+        try {
+          const fn = loopCompileExpr(inner);
+          if (m.index > last) parts.push(line.slice(last, m.index));
+          parts.push(fn);
+          last = m.index + m[0].length;
+        } catch (e) {
+          errors.push('Line ' + (idx + 1) + ': {' + m[1] + '} — ' + e.message);
+        }
+      } else if (/^[\w\s+\-*\/%().]+$/.test(inner)) {
+        warnings.add('{' + m[1] + '} is not a recognised variable — left unchanged.');
+      }
+    }
+    if (last < line.length) parts.push(line.slice(last));
+    lines.push({ parts: parts });
+  });
+  return { lines: lines, errors: errors, warnings: Array.from(warnings) };
+}
+
+/* ---------- reading + validating the form ---------- */
+function loopReadInputs() {
+  const errors = [];
+  let warnings = [];
+
+  const countRaw = loopEl('loopCount').value.trim();
+  const startRaw = loopEl('loopStart').value.trim();
+  let count = NaN, start = NaN;
+
+  if (!/^\d+$/.test(countRaw)) {
+    errors.push('Repeat Count must be a whole number.');
+  } else {
+    count = parseInt(countRaw, 10);
+    if (count < 1 || count > LOOP_MAX_COUNT) {
+      errors.push('Repeat Count must be between 1 and ' + loopNum(LOOP_MAX_COUNT) + '.');
+    }
+  }
+  if (!/^-?\d+$/.test(startRaw) || Math.abs(parseInt(startRaw, 10)) > 1e9) {
+    errors.push('Start Number must be a whole number (up to ±1,000,000,000).');
+  } else {
+    start = parseInt(startRaw, 10);
+  }
+
+  const pad = parseInt(loopEl('loopPad').value, 10) || 0;
+  const mode = loopEl('loopMode').value;
+  const text = loopEl('loopInput').value;
+
+  let lines = [];
+  if (text.trim() !== '') {
+    const c = loopCompileTemplate(text);
+    lines = c.lines;
+    warnings = c.warnings;
+    errors.push.apply(errors, c.errors);
+  }
+  return { errors: errors, warnings: warnings, count: count, start: start, pad: pad, mode: mode, lines: lines, empty: text.trim() === '' };
+}
+
+/* ---------- UI helpers ---------- */
+function loopSetStats(loops, lines, chars) {
+  loopEl('loopStatLoops').textContent = typeof loops === 'number' ? loopNum(loops) : loops;
+  loopEl('loopStatLines').textContent = typeof lines === 'number' ? loopNum(lines) : lines;
+  loopEl('loopStatChars').textContent = typeof chars === 'number' ? loopNum(chars) : chars;
+}
+
+function loopShowMsgs(errors, warnings, info) {
+  let html = '';
+  if (errors && errors.length) {
+    html += '<div class="lp-box lp-error"><div class="lp-box-title">Please fix:</div><ul>' +
+      errors.map(e => '<li>' + escapeHtml(e) + '</li>').join('') + '</ul></div>';
+  }
+  if (warnings && warnings.length) {
+    html += '<div class="lp-box lp-warn"><div class="lp-box-title">Warnings</div><ul>' +
+      warnings.map(w => '<li>' + escapeHtml(w) + '</li>').join('') + '</ul></div>';
+  }
+  if (info) html += '<div class="lp-box lp-info">' + escapeHtml(info) + '</div>';
+  loopEl('loopMsgs').innerHTML = html;
+}
+
+function loopToast(msg, isErr) {
+  const el = loopEl('loopToast');
+  el.textContent = msg;
+  el.className = 'lp-toast' + (isErr ? ' err' : '');
+  clearTimeout(loopToastTimer);
+  loopToastTimer = setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+function loopResetOutput() {
+  loopLastOutput = '';
+  loopEl('loopOutput').value = '';
+}
+
+/* ---------- generation (chunked so the page never freezes) ---------- */
+function loopGenerate(manual) {
+  const token = ++loopToken;
+  const cfg = loopReadInputs();
+  loopEl('loopStatus').textContent = '';
+
+  if (cfg.errors.length) {
+    loopResetOutput();
+    loopSetStats(0, 0, 0);
+    loopShowMsgs(cfg.errors, cfg.warnings);
+    return;
+  }
+  if (cfg.empty) {
+    loopResetOutput();
+    loopSetStats(0, 0, 0);
+    loopShowMsgs([], [], null);
+    return;
+  }
+
+  const perLoop = cfg.lines.length;
+  const totalLines = cfg.count * perLoop;
+
+  if (totalLines > LOOP_HARD_MAX_LINES) {
+    loopResetOutput();
+    loopSetStats(cfg.count, totalLines, '—');
+    loopShowMsgs(['This would generate ' + loopNum(totalLines) + ' lines. The limit is ' +
+      loopNum(LOOP_HARD_MAX_LINES) + ' lines — reduce the Repeat Count or split the template.'], cfg.warnings);
+    return;
+  }
+
+  if (totalLines > LOOP_CONFIRM_LINES) {
+    if (!manual) {
+      // never pop a dialog while the user is typing
+      loopResetOutput();
+      loopSetStats(cfg.count, totalLines, '—');
+      loopShowMsgs([], cfg.warnings, 'Large output (' + loopNum(totalLines) + ' lines). Press Generate to continue.');
+      return;
+    }
+    if (!window.confirm('You are generating ' + loopNum(totalLines) + ' lines. Continue?')) {
+      loopShowMsgs([], cfg.warnings, 'Generation cancelled.');
+      return;
+    }
+  }
+
+  loopShowMsgs([], cfg.warnings);
+  loopSetStats(cfg.count, totalLines, '…');
+
+  const chunks = [];
+  const ctx = { n: 0, i: 0 };
+  const perStep = totalLines <= LOOP_SYNC_LINES ? cfg.count : Math.max(1, Math.floor(LOOP_CHUNK_LINES / perLoop));
+  let loop = 0;
+  let counter = cfg.start;
+
+  function step() {
+    if (token !== loopToken) return; // superseded by a newer run
+    let curLine = 0;
+    try {
+      const end = Math.min(cfg.count, loop + perStep);
+      const buf = [];
+      for (; loop < end; loop++) {
+        ctx.n = cfg.start + loop;
+        ctx.i = loop;
+        for (curLine = 0; curLine < perLoop; curLine++) {
+          const L = cfg.lines[curLine];
+          if (L.blank) { buf.push(''); continue; }
+          let s = '';
+          for (let k = 0; k < L.parts.length; k++) {
+            const part = L.parts[k];
+            s += typeof part === 'string' ? part : loopFmt(part(ctx), cfg.pad);
+          }
+          if (cfg.mode === 'prefix') s = loopFmt(counter++, cfg.pad) + '. ' + s;
+          else if (cfg.mode === 'suffix') s = s + ' ' + loopFmt(counter++, cfg.pad);
+          buf.push(s);
+        }
+      }
+      chunks.push(buf.join('\n'));
+    } catch (e) {
+      loopResetOutput();
+      loopSetStats(cfg.count, totalLines, 0);
+      loopShowMsgs(['Loop ' + loopNum(loop + 1) + ', template line ' + (curLine + 1) + ': ' + e.message], cfg.warnings);
+      loopEl('loopStatus').textContent = '';
+      return;
+    }
+
+    if (loop < cfg.count) {
+      loopEl('loopStatus').textContent = 'Generating… ' + Math.floor(loop / cfg.count * 100) + '%';
+      setTimeout(step, 0);
+      return;
+    }
+
+    const text = chunks.join('\n');
+    loopLastOutput = text;
+    loopEl('loopOutput').value = text;
+    loopSetStats(cfg.count, totalLines, text.length);
+    loopEl('loopStatus').textContent = '';
+  }
+  step();
+}
+
+/* Called whenever an input changes */
+function loopChanged() {
+  if (loopEl('loopAuto').checked) {
+    clearTimeout(loopDebounce);
+    loopDebounce = setTimeout(() => loopGenerate(false), 150);
+  } else {
+    loopEl('loopStatus').textContent = 'Inputs changed — press Generate to update the output.';
+  }
+}
+
+/* ---------- copy / download / clear ---------- */
+function loopCopy() {
+  if (!loopLastOutput) { loopToast('Nothing to copy', true); return; }
+  const ok = () => loopToast('✓ Copied to clipboard');
+  const fallback = () => {
+    const ta = loopEl('loopOutput');
+    try {
+      ta.focus(); ta.select();
+      if (document.execCommand('copy')) ok(); else loopToast('Copy failed — select the output and press Ctrl+C', true);
+    } catch (e) {
+      loopToast('Copy failed — select the output and press Ctrl+C', true);
+    }
+    ta.setSelectionRange(0, 0);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(loopLastOutput).then(ok, fallback);
+  } else {
+    fallback();
+  }
+}
+
+function loopDownload(text, filename) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function loopDownloadOutput() {
+  if (!loopLastOutput) { loopToast('Nothing to download', true); return; }
+  loopDownload(loopLastOutput, 'smart-loop-output.txt');
+}
+
+function loopExportTemplate() {
+  const text = loopEl('loopInput').value;
+  if (text.trim() === '') { loopToast('Template is empty', true); return; }
+  loopDownload(text, 'smart-loop-template.txt');
+}
+
+function loopClear() {
+  loopToken++; // cancel anything in flight
+  clearTimeout(loopDebounce);
+  loopEl('loopInput').value = '';
+  loopResetOutput();
+  loopSetStats(0, 0, 0);
+  loopShowMsgs([], [], null);
+  loopEl('loopStatus').textContent = '';
+  loopEl('loopInput').focus();
+}
+
+/* ---------- saved templates (localStorage) ---------- */
+function loopReadStore() {
+  try {
+    const raw = localStorage.getItem(LOOP_STORE_KEY);
+    const obj = raw ? JSON.parse(raw) : {};
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch (e) { return {}; }
+}
+function loopWriteStore(obj) {
+  try { localStorage.setItem(LOOP_STORE_KEY, JSON.stringify(obj)); return true; }
+  catch (e) { return false; }
+}
+function loopRenderSaved(selectName) {
+  const sel = loopEl('loopTplSelect');
+  const store = loopReadStore();
+  const names = Object.keys(store).sort((a, b) => a.localeCompare(b));
+  sel.innerHTML = '<option value="">— Saved templates —</option>' +
+    names.map(n => '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + '</option>').join('');
+  if (selectName && names.indexOf(selectName) !== -1) sel.value = selectName;
+}
+function loopSaveTemplate() {
+  const name = loopEl('loopTplName').value.trim();
+  const template = loopEl('loopInput').value;
+  if (!name) { loopToast('Enter a template name first', true); return; }
+  if (template.trim() === '') { loopToast('Template is empty', true); return; }
+  const store = loopReadStore();
+  const existed = Object.prototype.hasOwnProperty.call(store, name);
+  store[name] = {
+    template: template,
+    count: loopEl('loopCount').value,
+    start: loopEl('loopStart').value,
+    pad: loopEl('loopPad').value,
+    mode: loopEl('loopMode').value
+  };
+  if (!loopWriteStore(store)) { loopToast('Could not save (browser storage unavailable)', true); return; }
+  loopRenderSaved(name);
+  loopToast(existed ? '✓ Template updated' : '✓ Template saved');
+}
+function loopLoadTemplate() {
+  const name = loopEl('loopTplSelect').value;
+  if (!name) { loopToast('Pick a saved template first', true); return; }
+  const t = loopReadStore()[name];
+  if (!t) { loopToast('Template not found', true); loopRenderSaved(); return; }
+  loopEl('loopInput').value = t.template || '';
+  if (t.count !== undefined) loopEl('loopCount').value = t.count;
+  if (t.start !== undefined) loopEl('loopStart').value = t.start;
+  if (t.pad !== undefined) loopEl('loopPad').value = t.pad;
+  if (t.mode !== undefined) loopEl('loopMode').value = t.mode;
+  loopEl('loopTplName').value = name;
+  loopToast('✓ Template loaded');
+  loopChanged();
+}
+function loopDeleteTemplate() {
+  const name = loopEl('loopTplSelect').value;
+  if (!name) { loopToast('Pick a saved template first', true); return; }
+  if (!window.confirm('Delete saved template "' + name + '"?')) return;
+  const store = loopReadStore();
+  delete store[name];
+  loopWriteStore(store);
+  loopRenderSaved();
+  loopToast('✓ Template deleted');
+}
+
+/* ---------- wiring ---------- */
+(function loopInit() {
+  ['loopInput', 'loopCount', 'loopStart', 'loopPad', 'loopMode'].forEach(id => {
+    loopEl(id).addEventListener('input', loopChanged);
+    loopEl(id).addEventListener('change', loopChanged);
+  });
+  loopEl('loopAuto').addEventListener('change', () => {
+    if (loopEl('loopAuto').checked) loopGenerate(false);
+  });
+
+  loopEl('loopBtnGen').addEventListener('click', () => loopGenerate(true));
+  loopEl('loopBtnCopy').addEventListener('click', loopCopy);
+  loopEl('loopBtnClear').addEventListener('click', loopClear);
+  loopEl('loopBtnDownload').addEventListener('click', loopDownloadOutput);
+  loopEl('loopBtnExport').addEventListener('click', loopExportTemplate);
+  loopEl('loopBtnImport').addEventListener('click', () => loopEl('loopFile').click());
+  loopEl('loopBtnSaveTpl').addEventListener('click', loopSaveTemplate);
+  loopEl('loopBtnLoadTpl').addEventListener('click', loopLoadTemplate);
+  loopEl('loopBtnDelTpl').addEventListener('click', loopDeleteTemplate);
+
+  loopEl('loopFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { loopToast('File too large (max 2 MB)', true); e.target.value = ''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      loopEl('loopInput').value = String(reader.result || '');
+      loopToast('✓ Imported ' + f.name);
+      loopChanged();
+    };
+    reader.onerror = () => loopToast('Could not read file', true);
+    reader.readAsText(f);
+    e.target.value = '';
+  });
+
+  // Shortcuts only act while the Loop tab is visible
+  document.addEventListener('keydown', (e) => {
+    if (!loopEl('loopTab').classList.contains('active')) return;
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'enter' && !e.shiftKey) { e.preventDefault(); loopGenerate(true); }
+    else if (k === 'c' && e.shiftKey) { e.preventDefault(); loopCopy(); }
+    else if (k === 'l' && !e.shiftKey) { e.preventDefault(); loopClear(); }
+  });
+
+  loopRenderSaved();
+})();
+
+/* ============================================================
+   TAB 4: IPSec (IKEv2) Script Generator
+   ============================================================ */
+function ipsecQuote(str) {
+  // RouterOS string escaping: \ " $ ?
+  return '"' + String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/\?/g, '\\?') + '"';
+}
+
+function ipsecValidIp(ip) {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  return !!m && m.slice(1).every(o => Number(o) <= 255);
+}
+
+function ipsecRandomPass() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  const buf = new Uint32Array(16);
+  crypto.getRandomValues(buf);
+  document.getElementById('ipSecret').value = Array.from(buf, n => chars[n % chars.length]).join('');
+}
+
+function generateIpsecScript() {
+  const val = id => document.getElementById(id).value.trim();
+  const name = val('ipName'), secret = val('ipSecret'), range = val('ipRange');
+  const dns = val('ipDns'), prefix = val('ipPrefix');
+  const errors = [], warnings = [];
+
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(name)) errors.push('Name-এ শুধু English letter, number, _ বা - ব্যবহার করুন (স্পেস ছাড়া, সর্বোচ্চ ৩২ অক্ষর)।');
+  if (secret === '') errors.push('Password দিন।');
+  else if (secret.length < 8) warnings.push('Password ৮ অক্ষরের কম — একটু বড় ও শক্ত password দিলে ভালো।');
+
+  const rp = range.split('-');
+  if (document.getElementById('ipMakePool').checked && (rp.length !== 2 || !ipsecValidIp(rp[0].trim()) || !ipsecValidIp(rp[1].trim()))) errors.push('Pool range সঠিক নয় (উদাহরণ: 10.10.10.2-10.10.10.254)।');
+
+  const dnsList = dns === '' ? [] : dns.split(',').map(x => x.trim());
+  if (dnsList.some(x => !ipsecValidIp(x))) errors.push('DNS Server সঠিক নয় — কমা দিয়ে IPv4 ঠিকানা দিন।');
+
+  const pl = Number(prefix);
+  if (!/^\d+$/.test(prefix) || pl < 1 || pl > 32) errors.push('Address prefix length ১ থেকে ৩২ এর মধ্যে হতে হবে।');
+
+  if (errors.length) { renderIpsecResult({ errors, warnings, script: '', name }); return; }
+
+  const poolName = val('ipPool'), makePool = document.getElementById('ipMakePool').checked;
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(poolName)) errors.push('Pool name সঠিক নয়।');
+  if (errors.length) { renderIpsecResult({ errors, warnings, script: '', name }); return; }
+
+  const n = {
+    pool: poolName, mode: name + '_MODE', prop: name + '_Proposal',
+    prof: name + '_Profile', grp: name + '_Group', peer: name + '_Peer'
+  };
+  const dh = val('ipDh');
+  // plain secret is written unquoted (same as a hand-typed command); quote+escape only when needed
+  const secretOut = /^[A-Za-z0-9_.-]+$/.test(secret) ? secret : ipsecQuote(secret);
+  const L = [];
+  L.push('# IPSec IKEv2 - ' + name);
+  L.push('# 1. Pool');
+  if (makePool) {
+    L.push('/ip pool');
+    L.push('add name=' + n.pool + ' ranges=' + range);
+  } else {
+    L.push('# (pool ' + n.pool + ' already exists - skipped)');
+  }
+  L.push('');
+  L.push('# 2. Mode Config');
+  L.push('/ip ipsec mode-config');
+  L.push('add address-pool=' + n.pool + ' address-prefix-length=' + pl + ' name=' + n.mode + (dnsList.length ? ' static-dns=' + dnsList.join(',') + ' system-dns=no' : ''));
+  L.push('');
+  L.push('# 3. Proposals');
+  L.push('/ip ipsec proposal');
+  L.push('add auth-algorithms=sha256,sha1 name=' + n.prop);
+  L.push('');
+  L.push('# 4. Profiles');
+  L.push('/ip ipsec profile');
+  L.push('add enc-algorithm=' + val('ipEnc') + ' hash-algorithm=' + val('ipHash') + (dh ? ' dh-group=' + dh : '') + ' name=' + n.prof);
+  L.push('');
+  L.push('# 5. Policy Group');
+  L.push('/ip ipsec policy group');
+  L.push('add name=' + n.grp);
+  L.push('');
+  L.push('# 6. Policy Template');
+  L.push('/ip ipsec policy');
+  L.push('add group=' + n.grp + ' proposal=' + n.prop + ' template=yes');
+  L.push('');
+  L.push('# 7. Peers');
+  L.push('/ip ipsec peer');
+  L.push('add exchange-mode=ike2 name=' + n.peer + ' passive=yes profile=' + n.prof);
+  L.push('');
+  L.push('# 8. Identities');
+  L.push('/ip ipsec identity');
+  L.push('add generate-policy=port-strict mode-config=' + n.mode + ' peer=' + n.peer + ' policy-template-group=' + n.grp + ' secret=' + secretOut);
+  if (document.getElementById('ipFw').checked) {
+    L.push('');
+    L.push('# 9. Firewall (input chain-এর একদম উপরে বসবে)');
+    L.push('/ip firewall filter');
+    L.push('add chain=input action=accept protocol=udp dst-port=500,4500 place-before=0 comment="' + name + ' IKEv2"');
+    L.push('add chain=input action=accept protocol=ipsec-esp place-before=0 comment="' + name + ' IPsec ESP"');
+  }
+  if (/3des/.test(val('ipEnc'))) warnings.push('3des দুর্বল — শুধু পুরনো client-এর জন্য রাখুন। সম্ভব হলে Advanced থেকে aes-256,aes-128 বেছে নিন।');
+
+  renderIpsecResult({ errors, warnings, script: L.join('\n'), name, objects: Object.values(n) });
+}
+
+function renderIpsecResult(d) {
+  const box = document.getElementById('ipsecResultBox');
+  let html = '';
+  if (d.script) {
+    html += `<div class="stat">Name: <b>${escapeHtml(d.name)}</b> — তৈরি হবে: ${d.objects.map(o => '<b>' + escapeHtml(o) + '</b>').join(', ')}</div>`;
+    html += `<pre id="ipsecScriptOutput">${escapeHtml(d.script)}</pre>`;
+    html += `<button onclick="copyIpsecScript()">Copy Script</button><span class="copy-msg" id="ipsecCopyMsg"></span>`;
+  }
+  if (d.errors.length) {
+    html += `<div class="error-box"><div class="box-title">⚠ Errors (${d.errors.length}):</div><ul>`;
+    d.errors.forEach(e => html += `<li>${escapeHtml(e)}</li>`);
+    html += `</ul></div>`;
+  }
+  if (d.warnings.length) {
+    html += `<div class="warn-box"><div class="box-title">Notes (${d.warnings.length}):</div><ul>`;
+    d.warnings.forEach(w => html += `<li>${escapeHtml(w)}</li>`);
+    html += `</ul></div>`;
+  }
+  box.innerHTML = html;
+  window._lastIpsecScript = d.script;
+  window._lastIpsecName = d.name;
+}
+
+function copyIpsecScript() {
+  const text = document.getElementById('ipsecScriptOutput').innerText;
+  const msg = document.getElementById('ipsecCopyMsg');
+  const ok = () => { msg.innerText = 'Copied!'; setTimeout(() => { msg.innerText = ''; }, 2000); };
+  const fallback = () => {
+    const r = document.createRange(); r.selectNodeContents(document.getElementById('ipsecScriptOutput'));
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    try { if (document.execCommand('copy')) ok(); } catch (e) {}
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(ok, fallback); else fallback();
+}
+
+function downloadIpsecScript() {
+  generateIpsecScript();
+  if (!window._lastIpsecScript) return;
+  const blob = new Blob([window._lastIpsecScript], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ipsec-' + window._lastIpsecName + '.rsc';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function clearIpsec() {
+  document.getElementById('ipName').value = '';
+  document.getElementById('ipSecret').value = '';
+  document.getElementById('ipsecResultBox').innerHTML = '';
+  window._lastIpsecScript = '';
+}
+</script>
+</body>
+</html>
